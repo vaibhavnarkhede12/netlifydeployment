@@ -40,3 +40,41 @@
     ]
   }
 }
+
+
+#!/bin/bash
+
+# List of GCP projects
+projects=("project1" "project2" "project3")
+
+# Loop through each project
+for project in "${projects[@]}"
+do
+    echo "Project: ${project}"
+    echo "----------------------------------"
+
+    # Set the current project
+    gcloud config set project "${project}"
+
+    # Get the list of GCS buckets
+    buckets=$(gsutil ls -p "${project}")
+
+    # Counter for buckets without zone separation
+    count=0
+
+    # Iterate through buckets
+    while IFS= read -r bucket
+    do
+        # Get the location constraint of the bucket
+        location=$(gsutil ls -L -b "${bucket}" | grep -i "locationconstraint:" | awk '{print $2}')
+
+        # Check if the location constraint is not set to a specific zone
+        if [[ "${location}" != "gs://storage.googleapis.com/"* ]]; then
+            echo "Bucket '${bucket}' does not have zone separation policy satisfied"
+            ((count++))
+        fi
+    done <<< "${buckets}"
+
+    echo "Number of buckets without zone separation policy satisfied: ${count}"
+    echo
+done
